@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WellNest — Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sage: #8fa882;
+      --cream: #f5f0e8;
+      --warm: #e8ddd0;
+      --deep: #2d2926;
+      --muted: #7a6f66;
+      --accent: #c4a882;
+      --sidebar: #f0ebe2;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--cream);
+      color: var(--deep);
+      font-family: 'DM Sans', sans-serif;
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: 100vh;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      background: var(--sidebar);
+      border-right: 1px solid var(--warm);
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 1.8rem 1.5rem 1.2rem;
+      border-bottom: 1px solid var(--warm);
+    }
+
+    .logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem;
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      color: var(--deep);
+      text-decoration: none;
+      display: block;
+      margin-bottom: 1rem;
+    }
+
+    .logo span { color: var(--sage); }
+
+    .new-chat-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--deep);
+      color: var(--cream);
+      border: none;
+      padding: 0.75rem 1.1rem;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .new-chat-btn:hover { background: #3d3530; }
+
+    .sidebar-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem 0.8rem;
+    }
+
+    .sidebar-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 0.7rem;
+      margin-bottom: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .history-item {
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.2s;
+    }
+
+    .history-item:hover, .history-item.active {
+      background: var(--warm);
+      color: var(--deep);
+    }
+
+    .sidebar-footer {
+      padding: 1.2rem 1.5rem;
+      border-top: 1px solid var(--warm);
+    }
+
+    .mood-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .mood-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .mood-btn {
+      flex: 1;
+      text-align: center;
+      padding: 0.4rem 0;
+      border-radius: 8px;
+      border: 1px solid var(--warm);
+      background: transparent;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+    }
+
+    .mood-btn:hover, .mood-btn.selected {
+      background: var(--warm);
+      border-color: var(--accent);
+    }
+
+    .disclaimer {
+      font-size: 0.68rem;
+      line-height: 1.5;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+
+    /* MAIN CHAT */
+    .chat-main {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: var(--cream);
+      position: relative;
+    }
+
+    /* Subtle gradient bg */
+    .chat-main::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 80% 20%, rgba(143,168,130,0.07) 0%, transparent 60%),
+                  radial-gradient(ellipse at 20% 80%, rgba(196,168,130,0.07) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .chat-header {
+      padding: 1.2rem 2rem;
+      border-bottom: 1px solid var(--warm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+
+    .chat-header-info h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem;
+      font-weight: 300;
+    }
+
+    .chat-header-info p {
+      font-size: 0.72rem;
+      color: var(--sage);
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 0.15rem;
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--sage);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .icon-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--warm);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 1rem;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .icon-btn:hover {
+      background: var(--warm);
+      color: var(--deep);
+    }
+
+    /* MESSAGES */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--warm); border-radius: 2px; }
+
+    /* Welcome state */
+    .welcome-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 1rem;
+      padding: 2rem;
+    }
+
+    .welcome-state .orb {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(143,168,130,0.4), rgba(143,168,130,0.05));
+      filter: blur(8px);
+      margin-bottom: 0.5rem;
+      animation: breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+
+    .welcome-state h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 300;
+    }
+
+    .welcome-state p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      max-width: 360px;
+      line-height: 1.65;
+      font-weight: 300;
+    }
+
+    .prompt-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      justify-content: center;
+      max-width: 520px;
+      margin-top: 1rem;
+    }
+
+    .chip {
+      background: rgba(255,255,255,0.6);
+      border: 1px solid var(--warm);
+      padding: 0.55rem 1.1rem;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      color: var(--deep);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 300;
+    }
+
+    .chip:hover {
+      background: var(--warm);
+      border-color: var(--accent);
+    }
+
+    /* Message bubbles */
+    .message {
+      display: flex;
+      gap: 1rem;
+      max-width: 720px;
+      animation: messageIn 0.3s ease;
+    }
+
+    @keyframes messageIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .avatar.ai {
+      background: linear-gradient(135deg, var(--sage), rgba(143,168,130,0.5));
+      color: white;
+      font-size: 0.85rem;
+    }
+
+    .avatar.user-av {
+      background: var(--deep);
+      color: var(--cream);
+      font-size: 0.75rem;
+    }
+
+    .bubble {
+      padding: 0.9rem 1.3rem;
+      border-radius: 18px;
+      font-size: 0.9rem;
+      line-height: 1.65;
+      font-weight: 300;
+      max-width: 600px;
+    }
+
+    .message.ai .bubble {
+      background: white;
+      border: 1px solid var(--warm);
+      border-top-left-radius: 4px;
+      color: var(--deep);
+    }
+
+    .message.user .bubble {
+      background: var(--deep);
+      color: var(--cream);
+      border-top-right-radius: 4px;
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      max-width: 720px;
+      animation: messageIn 0.3s ease;
+    }
+
+    .typing-dots {
+      background: white;
+      border: 1px solid var(--warm);
+      border-radius: 18px;
+      border-top-left-radius: 4px;
+      padding: 0.9rem 1.3rem;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .typing-dots span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: bounce 1.2s ease infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); opacity: 0.5; }
+      50% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* INPUT */
+    .input-area {
+      padding: 1.2rem 2rem 1.8rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .input-container {
+      background: white;
+      border: 1px solid var(--warm);
+      border-radius: 16px;
+      padding: 0.85rem 1rem 0.85rem 1.3rem;
+      display: flex;
+      align-items: flex-end;
+      gap: 0.75rem;
+      box-shadow: 0 4px 20px rgba(45,41,38,0.06);
+      transition: border-color 0.2s;
+    }
+
+    .input-container:focus-within {
+      border-color: var(--sage);
+    }
+
+    textarea {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: var(--deep);
+      background: transparent;
+      line-height: 1.5;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    textarea::placeholder { color: var(--muted); opacity: 0.7; }
+
+    .send-btn {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--deep);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--cream);
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .send-btn:hover { background: var(--sage); transform: scale(1.05); }
+    .send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+    .input-meta {
+      text-align: center;
+      font-size: 0.68rem;
+      color: var(--muted);
+      opacity: 0.6;
+      margin-top: 0.6rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .messages { padding: 1.5rem 1rem; }
+      .input-area { padding: 1rem 1rem 1.5rem; }
+      .chat-header { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="logo">Well<span>Nest</span></a>
+      <button class="new-chat-btn" onclick="newChat()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        New Session
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Recent</div>
+      <div class="history-item active">Current session</div>
+      <div class="history-item">Managing work stress</div>
+      <div class="history-item">Sleep & anxiety</div>
+      <div class="history-item">Processing a difficult week</div>
+      <div class="history-label" style="margin-top:1rem;"></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="mood-label">How are you feeling?</div>
+      <div class="mood-row">
+        <button class="mood-btn" title="Great" onclick="selectMood(this)">😊</button>
+        <button class="mood-btn" title="Okay" onclick="selectMood(this)">😐</button>
+        <button class="mood-btn" title="Low" onclick="selectMood(this)">😔</button>
+        <button class="mood-btn" title="Anxious" onclick="selectMood(this)">😰</button>
+        <button class="mood-btn" title="Overwhelmed" onclick="selectMood(this)">😤</button>
+      </div>
+      <p class="disclaimer">WellNest is not a crisis service. If you're in immediate distress, please contact a professional or call a helpline.</p>
+    </div>
+  </aside>
+
+  <!-- CHAT MAIN -->
+  <main class="chat-main">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <h2>WellNest Session</h2>
+        <p><span class="status-dot"></span> Present &amp; listening</p>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="icon-btn" title="Home">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <path d="M2 7.5L7.5 2 13 7.5M3.5 6v7h3V9h2v4h3V6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="messages" id="messages">
+      <!-- Welcome state shown before first message -->
+      <div class="welcome-state" id="welcomeState">
+        <div class="orb"></div>
+        <h3>Hello, I'm here for you.</h3>
+        <p>This is a safe space to share whatever is on your mind. There's no right or wrong way to start — just begin where you are.</p>
+        <div class="prompt-chips">
+          <div class="chip" onclick="usePrompt(this)">I've been feeling anxious lately</div>
+          <div class="chip" onclick="usePrompt(this)">I need to talk through something</div>
+          <div class="chip" onclick="usePrompt(this)">I'm having trouble sleeping</div>
+          <div class="chip" onclick="usePrompt(this)">Work has been overwhelming me</div>
+          <div class="chip" onclick="usePrompt(this)">I just want to vent</div>
+          <div class="chip" onclick="usePrompt(this)">Help me calm down</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-area">
+      <div class="input-container">
+        <textarea
+          id="userInput"
+          placeholder="Share what's on your mind..."
+          rows="1"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2 14L14 8 2 2v4.5L10 8l-8 1.5V14z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+      <p class="input-meta">Press Enter to send · Shift+Enter for new line</p>
+    </div>
+  </main>
+</div>
+
+<script>
+  const API_URL = 'http://localhost:3001';
+  let conversationHistory = [];
+  let isTyping = false;
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function usePrompt(el) {
+    document.getElementById('userInput').value = el.textContent;
+    sendMessage();
+  }
+
+  function selectMood(btn) {
+    document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  }
+
+  function newChat() {
+    conversationHistory = [];
+    const messages = document.getElementById('messages');
+    messages.innerHTML = `
+      <div class="welcome-state" id="welcomeState">
+        <div class="orb"></div>
+        <h3>Hello, I'm here for you.</h3>
+        <p>This is a safe space to share whatever is on your mind. There's no right or wrong way to start — just begin where you are.</p>
+        <div class="prompt-chips">
+          <div class="chip" onclick="usePrompt(this)">I've been feeling anxious lately</div>
+          <div class="chip" onclick="usePrompt(this)">I need to talk through something</div>
+          <div class="chip" onclick="usePrompt(this)">I'm having trouble sleeping</div>
+          <div class="chip" onclick="usePrompt(this)">Work has been overwhelming me</div>
+          <div class="chip" onclick="usePrompt(this)">I just want to vent</div>
+          <div class="chip" onclick="usePrompt(this)">Help me calm down</div>
+        </div>
+      </div>`;
+  }
+
+  function addMessage(role, content) {
+    const messages = document.getElementById('messages');
+
+    // Remove welcome state on first message
+    const welcome = document.getElementById('welcomeState');
+    if (welcome) welcome.remove();
+
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    if (role === 'ai') {
+      div.innerHTML = `
+        <div class="avatar ai">🌿</div>
+        <div class="bubble">${content}</div>`;
+    } else {
+      div.innerHTML = `
+        <div class="avatar user-av">You</div>
+        <div class="bubble">${content}</div>`;
+    }
+
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function showTyping() {
+    const messages = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'typing-indicator';
+    div.id = 'typingIndicator';
+    div.innerHTML = `
+      <div class="avatar ai">🌿</div>
+      <div class="typing-dots">
+        <span></span><span></span><span></span>
+      </div>`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text || isTyping) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    isTyping = true;
+    document.getElementById('sendBtn').disabled = true;
+
+    addMessage('user', text);
+    conversationHistory.push({ role: 'user', content: text });
+
+    showTyping();
+
+    try {
+      const res = await fetch(`${API_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: conversationHistory })
+      });
+
+      const data = await res.json();
+      removeTyping();
+
+      if (data.reply) {
+        addMessage('ai', data.reply);
+        conversationHistory.push({ role: 'assistant', content: data.reply });
+      } else if (data.error) {
+        addMessage('ai', 'I'm sorry, I had trouble responding just then. Could you try again?');
+      }
+    } catch (err) {
+      removeTyping();
+      // Fallback offline response
+      const fallbacks = [
+        "I hear you. It sounds like you're carrying quite a lot right now. Can you tell me more about what's been weighing on you most?",
+        "Thank you for sharing that with me. It takes courage to put these feelings into words. How long have you been feeling this way?",
+        "What you're describing makes a lot of sense given everything you're going through. I want you to know — you don't have to navigate this alone. What would feel most helpful right now?",
+        "I'm here with you. Let's take this one step at a time. When you say that, what does it feel like in your body — where do you notice it most?"
+      ];
+      addMessage('ai', fallbacks[Math.floor(Math.random() * fallbacks.length)]);
+    }
+
+    isTyping = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('userInput').focus();
+  }
+</script>
+
+</body>
+</html>
