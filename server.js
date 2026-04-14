@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 require('dotenv').config();
 
 const app = express();
@@ -10,9 +10,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public')); // serve frontend from /public if desired
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const SYSTEM_PROMPT = `You are WellNest, a compassionate AI therapy companion. Your role is to provide emotional support, active listening, and evidence-based coping strategies.
 
@@ -31,7 +29,6 @@ Response length: conversational — typically 2–4 sentences. Never lecture. Pr
 
 IMPORTANT: You are not a replacement for professional mental health care. If someone expresses thoughts of self-harm or suicide, immediately and warmly provide crisis resources (e.g., 988 Suicide & Crisis Lifeline in the US).`;
 
-// Chat endpoint
 app.post('/chat', async (req, res) => {
   const { messages } = req.body;
 
@@ -39,7 +36,6 @@ app.post('/chat', async (req, res) => {
     return res.status(400).json({ error: 'Messages array is required.' });
   }
 
-  // Validate message structure
   const validMessages = messages.filter(m =>
     m.role && (m.role === 'user' || m.role === 'assistant') && m.content
   );
@@ -49,26 +45,24 @@ app.post('/chat', async (req, res) => {
   }
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 600,
-      system: SYSTEM_PROMPT,
-      messages: validMessages,
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    const reply = response.content[0]?.text || '';
+    // Convert messages into a single prompt
+    const chatHistory = validMessages
+      .map(m => `${m.role}: ${m.content}`)
+      .join("\n");
+
+    const result = await model.generateContent(
+      `${SYSTEM_PROMPT}\n\nConversation:\n${chatHistory}`
+    );
+
+    const response = await result.response;
+    const reply = response.text();
+
     res.json({ reply });
 
   } catch (err) {
-    console.error('Anthropic API error:', err.message);
-
-    if (err.status === 401) {
-      return res.status(500).json({ error: 'API key invalid. Check your ANTHROPIC_API_KEY.' });
-    }
-    if (err.status === 529 || err.status === 503) {
-      return res.status(503).json({ error: 'Service temporarily unavailable. Please try again.' });
-    }
-
+    console.error('Gemini API error:', err.message);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
